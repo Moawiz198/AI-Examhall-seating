@@ -239,11 +239,10 @@ h1, h2, h3, h4, h5, h6 {
   white-space: pre-wrap;
 }
 
-/* Grid Visualizer */
 .grid-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   height: 100%;
   width: 100%;
   overflow: auto;
@@ -257,6 +256,7 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(15, 23, 42, 0.3);
   border-radius: 16px;
   border: 1px solid var(--surface-hover);
+  margin: auto;
 }
 
 .seat {

@@ -10,7 +10,7 @@ export default function VisualizationPanel({ rows, cols, optimizer, seating, get
       </div>
       <div className="grid-container">
         {optimizer && (
-          <div className="hall-grid" style={{ gridTemplateRows: `repeat(${rows}, 1fr)`, gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+          <div className="hall-grid" style={{ gridTemplateRows: `repeat(${rows}, max-content)`, gridTemplateColumns: `repeat(${cols}, max-content)` }}>
             <AnimatePresence>
               {Array.from({ length: rows }).map((_, i) => 
                 Array.from({ length: cols }).map((_, j) => {

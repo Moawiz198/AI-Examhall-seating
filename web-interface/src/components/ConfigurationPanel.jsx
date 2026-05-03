@@ -18,11 +18,11 @@ export default function ConfigurationPanel({
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Rows</label>
-            <input type="number" min="3" max="20" value={rows} onChange={(e) => setRows(Number(e.target.value))} className="form-input" />
+            <input type="number" min="3" max="20" value={rows === '' ? '' : rows.toString()} onChange={(e) => setRows(e.target.value === '' ? '' : parseInt(e.target.value, 10))} className="form-input" />
           </div>
           <div className="form-group">
             <label className="form-label">Columns</label>
-            <input type="number" min="3" max="20" value={cols} onChange={(e) => setCols(Number(e.target.value))} className="form-input" />
+            <input type="number" min="3" max="20" value={cols === '' ? '' : cols.toString()} onChange={(e) => setCols(e.target.value === '' ? '' : parseInt(e.target.value, 10))} className="form-input" />
           </div>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default function ConfigurationPanel({
         </div>
         <div className="form-group">
           <label className="form-label">Number of Students</label>
-          <input type="number" min="1" max="400" value={numStudents} onChange={(e) => setNumStudents(Number(e.target.value))} className="form-input" />
+          <input type="number" min="1" max="400" value={numStudents === '' ? '' : numStudents.toString()} onChange={(e) => setNumStudents(e.target.value === '' ? '' : parseInt(e.target.value, 10))} className="form-input" />
         </div>
         <div className="form-group">
           <label className="form-label">Subjects (comma-separated)</label>

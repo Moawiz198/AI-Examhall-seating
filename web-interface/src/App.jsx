@@ -81,7 +81,7 @@ function App() {
     if (!optimizer) return;
     setStats(`Running ${algorithm}...`);
     try {
-      const response = await fetch('http://localhost:5000/solve', {
+      const response = await fetch('/api/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

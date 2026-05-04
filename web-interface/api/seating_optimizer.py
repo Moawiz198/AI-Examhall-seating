@@ -7,6 +7,7 @@ class Student:
         self.id = id
         self.subject = subject
 
+
 class SeatingOptimizer:
     def __init__(self, rows, cols, students):
         self.rows = rows
@@ -14,169 +15,180 @@ class SeatingOptimizer:
         self.students = students
         self.hall = [[None for _ in range(cols)] for _ in range(rows)]
 
-    def get_neighbors(self, row, col):
-        neighbors = []
-        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nr, nc = row + dr, col + dc
+    # ---------- Neighbors ----------
+    def get_neighbors(self, r, c):
+        directions = [(-1,0),(1,0),(0,-1),(0,1)]
+        res = []
+        for dr, dc in directions:
+            nr, nc = r+dr, c+dc
             if 0 <= nr < self.rows and 0 <= nc < self.cols:
-                neighbors.append((nr, nc))
-        return neighbors
+                res.append((nr,nc))
+        return res
 
-    def check_constraint(self, student, row, col, hall):
-        for nr, nc in self.get_neighbors(row, col):
+    # ---------- Constraint ----------
+    def check_constraint(self, student, r, c, hall):
+        for nr, nc in self.get_neighbors(r, c):
             neighbor = hall[nr][nc]
             if neighbor and neighbor.subject == student.subject:
                 return False
         return True
 
+    # ---------- Conflict Count ----------
     def count_conflicts(self, hall):
         conflicts = 0
         for i in range(self.rows):
             for j in range(self.cols):
                 if hall[i][j]:
-                    student = hall[i][j]
-                    for nr, nc in self.get_neighbors(i, j):
-                        if hall[nr][nc] and hall[nr][nc].subject == student.subject:
+                    s = hall[i][j]
+                    for ni, nj in self.get_neighbors(i, j):
+                        if hall[ni][nj] and hall[ni][nj].subject == s.subject:
                             conflicts += 1
         return conflicts // 2
 
-    def to_dict_hall(self, hall):
-        res = []
-        for i in range(self.rows):
-            row_res = []
-            for j in range(self.cols):
-                student = hall[i][j]
-                if student:
-                    row_res.append({"id": student.id, "subject": student.subject})
-                else:
-                    row_res.append(None)
-            res.append(row_res)
-        return res
+    # ---------- Convert ----------
+    def to_dict(self, hall):
+        return [
+            [
+                None if cell is None else {"id": cell.id, "subject": cell.subject}
+                for cell in row
+            ]
+            for row in hall
+        ]
 
+    # ================= CSP =================
     def csp_solve(self):
-        start_time = time.time()
-        result_hall = deepcopy(self.hall)
-        student_copy = deepcopy(self.students)
-        random.shuffle(student_copy)
+        start = time.time()
+        hall = deepcopy(self.hall)
+        students = deepcopy(self.students)
+        random.shuffle(students)
 
         stats = {
-            'algorithm': 'CSP (Constraint Propagation)',
-            'conflicts': 0,
-            'time': 0,
-            'placements': 0,
-            'constraint_checks': 0
+            "algorithm": "CSP (Greedy Constraint Placement)",
+            "placements": 0,
+            "conflicts": 0,
+            "time": 0
         }
 
-        placed = 0
-        for student in student_copy:
-            valid_positions = []
+        for student in students:
+            valid = []
+
             for i in range(self.rows):
                 for j in range(self.cols):
-                    if result_hall[i][j] is None:
-                        stats['constraint_checks'] += 1
-                        if self.check_constraint(student, i, j, result_hall):
-                            valid_positions.append((i, j))
-            
-            if valid_positions:
-                best_pos = min(valid_positions, key=lambda p: len(self.get_neighbors(p[0], p[1])))
-                result_hall[best_pos[0]][best_pos[1]] = student
-                stats['placements'] += 1
-                placed += 1
+                    if hall[i][j] is None:
+                        if self.check_constraint(student, i, j, hall):
+                            valid.append((i, j))
+
+            if valid:
+                r, c = random.choice(valid)
+                hall[r][c] = student
+                stats["placements"] += 1
             else:
-                placed_anywhere = False
+                # fallback placement
                 for i in range(self.rows):
+                    placed = False
                     for j in range(self.cols):
-                        if result_hall[i][j] is None:
-                            result_hall[i][j] = student
-                            placed += 1
-                            placed_anywhere = True
+                        if hall[i][j] is None:
+                            hall[i][j] = student
+                            placed = True
                             break
-                    if placed_anywhere: break
+                    if placed:
+                        break
 
-        stats['time'] = time.time() - start_time
-        stats['conflicts'] = self.count_conflicts(result_hall)
-        return self.to_dict_hall(result_hall), stats
+        stats["conflicts"] = self.count_conflicts(hall)
+        stats["time"] = time.time() - start
+        return self.to_dict(hall), stats
 
-    def backtracking_solve(self, max_backtracks=15000):
-        start_time = time.time()
-        result_hall = deepcopy(self.hall)
-        student_copy = deepcopy(self.students)
-        random.shuffle(student_copy)
+    # ================= BACKTRACKING =================
+    def backtracking_solve(self, max_backtracks=5000):
+        start = time.time()
+        hall = deepcopy(self.hall)
+        students = deepcopy(self.students)
 
         stats = {
-            'algorithm': 'Backtracking',
-            'conflicts': 0,
-            'time': 0,
-            'placements': 0,
-            'backtracks': 0,
-            'success': False
+            "algorithm": "Backtracking",
+            "backtracks": 0,
+            "placements": 0,
+            "conflicts": 0,
+            "success": False,
+            "time": 0
         }
 
-        def backtrack(student_idx):
-            # Prevent hanging on difficult constraints (exponential time)
-            if stats['backtracks'] >= max_backtracks:
-                return False
-                
-            stats['placements'] += 1
-            if student_idx == len(student_copy): return True
+        def solve(i):
+            if i == len(students):
+                return True
 
-            student = student_copy[student_idx]
-            for i in range(self.rows):
-                for j in range(self.cols):
-                    if result_hall[i][j] is None:
-                        if self.check_constraint(student, i, j, result_hall):
-                            result_hall[i][j] = student
-                            if backtrack(student_idx + 1): return True
-                            result_hall[i][j] = None
-                            stats['backtracks'] += 1
+            if stats["backtracks"] > max_backtracks:
+                return False
+
+            student = students[i]
+
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    if hall[r][c] is None:
+                        if self.check_constraint(student, r, c, hall):
+                            hall[r][c] = student
+                            stats["placements"] += 1
+
+                            if solve(i + 1):
+                                return True
+
+                            hall[r][c] = None
+                            stats["backtracks"] += 1
+
             return False
 
-        stats['success'] = backtrack(0)
-        stats['time'] = time.time() - start_time
-        stats['conflicts'] = self.count_conflicts(result_hall)
-        return self.to_dict_hall(result_hall), stats
+        stats["success"] = solve(0)
+        stats["conflicts"] = self.count_conflicts(hall)
+        stats["time"] = time.time() - start
 
-    def hill_climbing_solve(self, iterations=200):
-        start_time = time.time()
-        result_hall = deepcopy(self.hall)
-        student_copy = deepcopy(self.students)
-        random.shuffle(student_copy)
+        return self.to_dict(hall), stats
 
-        idx = 0
+    # ================= HILL CLIMBING =================
+    def hill_climbing_solve(self, iterations=300):
+        start = time.time()
+        students = deepcopy(self.students)
+        random.shuffle(students)
+
+        hall = [[None for _ in range(self.cols)] for _ in range(self.rows)]
+
+        k = 0
         for i in range(self.rows):
             for j in range(self.cols):
-                if idx < len(student_copy):
-                    result_hall[i][j] = student_copy[idx]
-                    idx += 1
+                if k < len(students):
+                    hall[i][j] = students[k]
+                    k += 1
+
+        def get_conf():
+            return self.count_conflicts(hall)
+
+        best_conf = get_conf()
 
         stats = {
-            'algorithm': 'Hill Climbing',
-            'conflicts': self.count_conflicts(result_hall),
-            'time': 0,
-            'iterations': 0,
-            'improvements': 0
+            "algorithm": "Hill Climbing",
+            "iterations": 0,
+            "conflicts": best_conf,
+            "improvements": 0,
+            "time": 0
         }
 
-        best_hall = deepcopy(result_hall)
-        best_conflicts = stats['conflicts']
-
-        for iteration in range(iterations):
+        for it in range(iterations):
             r1, c1 = random.randint(0, self.rows-1), random.randint(0, self.cols-1)
             r2, c2 = random.randint(0, self.rows-1), random.randint(0, self.cols-1)
 
-            result_hall[r1][c1], result_hall[r2][c2] = result_hall[r2][c2], result_hall[r1][c1]
-            new_conflicts = self.count_conflicts(result_hall)
+            hall[r1][c1], hall[r2][c2] = hall[r2][c2], hall[r1][c1]
 
-            if new_conflicts < best_conflicts:
-                best_conflicts = new_conflicts
-                best_hall = deepcopy(result_hall)
-                stats['improvements'] += 1
+            new_conf = get_conf()
+
+            if new_conf < best_conf:
+                best_conf = new_conf
+                stats["improvements"] += 1
             else:
-                if random.random() > 0.3:
-                    result_hall[r1][c1], result_hall[r2][c2] = result_hall[r2][c2], result_hall[r1][c1]
-            
-            stats['iterations'] = iteration + 1
+                # revert swap
+                hall[r1][c1], hall[r2][c2] = hall[r2][c2], hall[r1][c1]
 
-        stats['time'] = time.time() - start_time
-        stats['conflicts'] = best_conflicts
-        return self.to_dict_hall(best_hall), stats
+            stats["iterations"] = it + 1
+
+        stats["conflicts"] = best_conf
+        stats["time"] = time.time() - start
+
+        return self.to_dict(hall), stats

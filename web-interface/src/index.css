@@ -260,8 +260,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .seat {
-  width: 60px;
-  height: 60px;
+  width: 75px;
+  height: 75px;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -271,6 +271,9 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  text-align: center;
+  overflow: hidden;
 }
 
 .seat.empty {
